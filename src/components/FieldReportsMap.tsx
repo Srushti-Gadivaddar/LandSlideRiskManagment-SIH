@@ -35,7 +35,6 @@ export const FieldReportsMap: React.FC<FieldReportsMapProps> = ({
         color = '#F97316'; // Orange
         symbol = '🚧';
         break;
-      case 'Possible landslide':
       case 'Soil movement':
         color = '#DC2626'; // Dark Red
         symbol = '⛰️';

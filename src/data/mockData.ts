@@ -5,7 +5,8 @@ import type {
   RoadSegment,
   ResponsePriorityItem,
   SatelliteAnalysis,
-  CommunityAlertTemplate
+  CommunityAlertTemplate,
+  SupportedLanguage
 } from '../types';
 
 export const initialRiskZones: RiskZone[] = [
