@@ -3,19 +3,26 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import type { AlertItem } from '../types';
 import { RiskBadge } from '../components/RiskBadge';
-import { AlertModal } from '../components/AlertModal';
 import {
   Bell,
   CheckCircle2,
   Send,
-  ArrowUpRight
+  Eye,
+  ArrowUpRight,
+  ShieldCheck,
+  X,
+  FileText,
+  AlertTriangle,
+  ArrowRight
 } from 'lucide-react';
 
 export const Alerts: React.FC = () => {
   const navigate = useNavigate();
   const { alerts, updateAlertStatus, addToast } = useApp();
-  const [selectedFilter, setSelectedFilter] = useState<'ALL' | 'CRITICAL' | 'HIGH' | 'MODERATE' | 'RESOLVED'>('ALL');
-  const [activeModalAlert, setActiveModalAlert] = useState<AlertItem | null>(null);
+  const [selectedFilter, setSelectedFilter] = useState<'CRITICAL' | 'HIGH' | 'MODERATE' | 'RESOLVED' | 'ALL'>('ALL');
+  const [composerAlert, setComposerAlert] = useState<AlertItem | null>(null);
+  const [customActionText, setCustomActionText] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
   const filteredAlerts = alerts.filter((alert) => {
     if (selectedFilter === 'ALL') return true;
@@ -23,163 +30,145 @@ export const Alerts: React.FC = () => {
     return alert.riskLevel === selectedFilter && alert.status !== 'RESOLVED';
   });
 
-  const handleEscalate = async (e: React.MouseEvent, alert: AlertItem) => {
-    e.stopPropagation();
-    await updateAlertStatus(alert.id, 'ESCALATED');
-    addToast(
-      'Alert Escalated',
-      `Disaster advisory for ${alert.region} escalated to Level 1 Emergency Desk.`,
-      'warning'
-    );
+  const handleOpenComposer = (alert: AlertItem) => {
+    setComposerAlert(alert);
+    setCustomActionText(alert.recommendedAction);
   };
 
-  const handleQuickPreview = (alert: AlertItem) => {
-    setActiveModalAlert(alert);
+  const handleDispatchPreparedAlert = () => {
+    if (!composerAlert) return;
+    setIsSending(true);
+    setTimeout(() => {
+      setIsSending(false);
+      addToast(
+        'Warning Dispatched',
+        `Official alert for ${composerAlert.region} queued for multi-agency broadcast.`,
+        'success'
+      );
+      setComposerAlert(null);
+    }, 500);
   };
 
   return (
     <div className="space-y-5">
-      {/* Title & Header */}
+      {/* Title & Subtitle */}
       <div className="pb-3 border-b border-[#1E2E44] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className="p-1 rounded bg-red-500/10 text-red-400">
+            <span className="p-1 rounded bg-[#0F766E]/20 text-[#14B8A6]">
               <Bell className="w-4 h-4" />
             </span>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-100 tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-100 tracking-tight">
               Early Warning Center
             </h1>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-red-950 text-red-300 border border-red-800">
-              CAP COMPLIANT (DEMO)
-            </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Monitor and manage location-level risk alerts across NER sectors.
+            Prediction → Alert → Action: Monitor and manage location-level risk advisories.
           </p>
         </div>
 
-        {/* Filter Buttons */}
-        <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-lg bg-[#101D2E] border border-[#1E2E44]">
+        {/* Top Filter Buttons: Critical, High, Moderate, Resolved */}
+        <div className="flex items-center gap-1.5 p-1 rounded bg-[#0B1728] border border-[#1E2E44]">
           {(['ALL', 'CRITICAL', 'HIGH', 'MODERATE', 'RESOLVED'] as const).map((filter) => (
             <button
               key={filter}
               onClick={() => setSelectedFilter(filter)}
-              className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
                 selectedFilter === filter
-                  ? 'bg-cyan-600 text-white shadow-sm'
+                  ? 'bg-[#0F766E] text-white shadow-sm'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              {filter.charAt(0) + filter.slice(1).toLowerCase()}
+              {filter === 'ALL' ? 'All' : filter.charAt(0) + filter.slice(1).toLowerCase()}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Alert Cards Feed */}
-      <div className="space-y-3.5">
+      {/* Alert List */}
+      <div className="space-y-3">
         {filteredAlerts.length === 0 ? (
-          <div className="p-8 text-center bg-[#101D2E] rounded-xl border border-[#1E2E44]">
-            <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
-            <p className="text-sm font-semibold text-slate-200">No alerts found under current filter</p>
+          <div className="p-8 text-center bg-[#0B1728] rounded-lg border border-[#1E2E44]">
+            <CheckCircle2 className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
+            <p className="text-xs font-medium text-slate-300">No alerts found under current filter</p>
           </div>
         ) : (
           filteredAlerts.map((alert) => (
             <div
               key={alert.id}
-              onClick={() => handleQuickPreview(alert)}
-              className={`p-4 rounded-xl border transition-all cursor-pointer hover:-translate-y-0.5 shadow-lg ${
-                alert.riskLevel === 'CRITICAL'
-                  ? 'bg-[#101D2E] border-red-500/40 hover:border-red-500/70 shadow-[0_0_15px_-3px_rgba(239,68,68,0.1)]'
-                  : alert.riskLevel === 'HIGH'
-                  ? 'bg-[#101D2E] border-orange-500/40 hover:border-orange-500/70 shadow-[0_0_15px_-3px_rgba(249,115,22,0.1)]'
-                  : 'bg-[#101D2E] border-[#1E2E44] hover:border-slate-600'
-              }`}
+              className="p-4 rounded-lg bg-[#0B1728] border border-[#1E2E44] hover:border-slate-600 transition-colors shadow-sm space-y-3"
             >
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                {/* Left side: Region, Level, ID */}
-                <div className="space-y-1">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+                {/* Location, Risk Level, Score, Confidence */}
+                <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-mono text-slate-400">
                       {alert.id} • {alert.timestamp}
                     </span>
                     {alert.status === 'ESCALATED' && (
-                      <span className="text-[10px] font-bold font-mono px-1.5 py-0.2 rounded bg-red-950 text-red-300 border border-red-700">
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-red-950 text-red-300 border border-red-700">
                         ESCALATED
                       </span>
                     )}
                     {alert.status === 'RESOLVED' && (
-                      <span className="text-[10px] font-bold font-mono px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-700">
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-700">
                         RESOLVED
                       </span>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-base font-extrabold text-slate-100">
+                  <div className="flex items-center gap-2.5 mt-1">
+                    <h3 className="text-base font-bold text-slate-100">
                       {alert.region}
                     </h3>
                     <RiskBadge level={alert.riskLevel} score={alert.riskScore} size="sm" />
-                    <span className="text-xs font-mono text-cyan-400">
+                    <span className="text-xs font-mono text-slate-400">
                       Confidence: {alert.confidence}%
                     </span>
                   </div>
                 </div>
 
-                {/* Right side: Action Buttons */}
+                {/* Buttons: [ View ] and [ Prepare Alert ] */}
                 <div className="flex items-center gap-2 self-start md:self-auto">
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/location/${alert.zoneId}`);
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center gap-1.5 transition-colors"
+                    onClick={() => navigate(`/location/${alert.zoneId}`)}
+                    className="px-3 py-1.5 rounded bg-[#07111F] hover:bg-[#101D2E] text-slate-300 hover:text-white border border-[#1E2E44] text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
-                    <span>View Location</span>
-                    <ArrowUpRight className="w-3.5 h-3.5" />
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>View</span>
                   </button>
 
                   <button
-                    onClick={(e) => handleEscalate(e, alert)}
-                    className="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/40 text-xs font-semibold transition-colors"
+                    onClick={() => handleOpenComposer(alert)}
+                    className="px-3.5 py-1.5 rounded bg-[#0F766E] hover:bg-[#0D9488] text-white text-xs font-semibold shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
-                    Escalate
-                  </button>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleQuickPreview(alert);
-                    }}
-                    className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md transition-all flex items-center gap-1.5"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>Preview & Send</span>
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Prepare Alert</span>
                   </button>
                 </div>
               </div>
 
-              {/* Triggers & Recommended Action */}
-              <div className="mt-3 pt-3 border-t border-[#1E2E44]/70 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              {/* Main Contributing Factors & Action Required */}
+              <div className="pt-2.5 border-t border-[#1E2E44]/70 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                 <div>
-                  <span className="text-slate-400 block font-semibold text-[11px] mb-1">
-                    Multi-Factor Triggers:
+                  <span className="text-[10px] font-mono uppercase text-slate-400 block mb-1">
+                    Main Contributing Factors
                   </span>
                   <div className="flex flex-wrap gap-1.5">
-                    {alert.trigger.map((t, idx) => (
+                    {alert.trigger.map((trig, idx) => (
                       <span
                         key={idx}
                         className="px-2 py-0.5 rounded bg-[#07111F] text-slate-300 font-mono text-[11px] border border-[#1E2E44]"
                       >
-                        {t}
+                        {trig}
                       </span>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <span className="text-slate-400 block font-semibold text-[11px] mb-1">
-                    Recommended Action:
+                  <span className="text-[10px] font-mono uppercase text-slate-400 block mb-1">
+                    Action / Response Status
                   </span>
                   <p className="text-slate-200 font-medium">
                     {alert.recommendedAction}
@@ -191,11 +180,101 @@ export const Alerts: React.FC = () => {
         )}
       </div>
 
-      {/* Warning Preview Modal */}
-      <AlertModal
-        alert={activeModalAlert}
-        onClose={() => setActiveModalAlert(null)}
-      />
+      {/* Warning Composer Modal Drawer */}
+      {composerAlert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full max-w-xl bg-[#0B1728] rounded-xl border border-[#1E2E44] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-5 py-4 border-b border-[#1E2E44] bg-[#07111F] flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-mono tracking-wider text-[#2DD4BF] uppercase font-semibold block">
+                  WARNING COMPOSER
+                </span>
+                <h3 className="text-base font-bold text-slate-100">
+                  Prepare Operational Alert: {composerAlert.region}
+                </h3>
+              </div>
+              <button
+                onClick={() => setComposerAlert(null)}
+                className="p-1 text-slate-400 hover:text-white rounded cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto space-y-4 text-xs">
+              <div className="p-3 rounded bg-[#07111F] border border-[#1E2E44] flex items-center justify-between">
+                <div>
+                  <span className="text-slate-400 text-[10px] block font-mono">Assessed Hazard Level</span>
+                  <span className="text-lg font-bold font-mono text-red-400">
+                    {composerAlert.riskScore}/100 • {composerAlert.riskLevel}
+                  </span>
+                </div>
+                <RiskBadge level={composerAlert.riskLevel} size="md" />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">
+                  Alert Advisory Statement
+                </label>
+                <textarea
+                  rows={3}
+                  value={customActionText}
+                  onChange={(e) => setCustomActionText(e.target.value)}
+                  className="w-full bg-[#07111F] border border-[#1E2E44] rounded p-2.5 text-slate-100 focus:outline-none focus:border-[#0D9488] leading-relaxed"
+                />
+              </div>
+
+              <div>
+                <span className="text-[11px] font-semibold text-slate-300 uppercase tracking-wider block mb-1.5">
+                  Designated Distribution Channels
+                </span>
+                <div className="space-y-1.5 text-slate-300 font-mono text-[11px]">
+                  {composerAlert.recipients.map((rec, i) => (
+                    <div key={i} className="px-2.5 py-1.5 rounded bg-[#07111F] border border-[#1E2E44] flex items-center justify-between">
+                      <span>{rec}</span>
+                      <span className="text-[9px] text-emerald-400 bg-emerald-950/80 px-1 rounded border border-emerald-800">READY</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded bg-slate-900 border border-slate-700/60 text-[11px] text-slate-400">
+                <strong>Operational Protocol:</strong> Warning queue integrates into CAP feeds, state emergency operations desks, and multi-agency field radios upon authorized dispatch.
+              </div>
+            </div>
+
+            <div className="px-5 py-3 border-t border-[#1E2E44] bg-[#07111F] flex items-center justify-between">
+              <button
+                onClick={() => {
+                  setComposerAlert(null);
+                  navigate('/community-alerts');
+                }}
+                className="text-xs text-[#2DD4BF] hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>Open Multilingual Alert Center</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setComposerAlert(null)}
+                  className="px-3 py-1.5 rounded bg-slate-800 text-slate-300 text-xs font-medium cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDispatchPreparedAlert}
+                  disabled={isSending}
+                  className="px-4 py-1.5 rounded bg-[#0F766E] hover:bg-[#0D9488] text-white text-xs font-semibold shadow-sm flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{isSending ? 'Dispatching...' : 'Dispatch Alert'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

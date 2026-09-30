@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { RiskZone, AlertItem, FieldReport } from '../types';
+import type { RiskZone, AlertItem, FieldReport, UserRole } from '../types';
 import { api } from '../services/api';
 
 export interface ToastMessage {
@@ -11,7 +11,10 @@ export interface ToastMessage {
 
 interface AppContextType {
   isAuthenticated: boolean;
-  login: (id: string) => void;
+  userRole: UserRole;
+  officialId: string;
+  setUserRole: (role: UserRole) => void;
+  login: (id: string, role: UserRole) => void;
   logout: () => void;
   riskZones: RiskZone[];
   alerts: AlertItem[];
@@ -29,7 +32,9 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true); // default authenticated for ease of hackathon demo inspection
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
+  const [userRole, setUserRole] = useState<UserRole>('District Authority');
+  const [officialId, setOfficialId] = useState<string>('NER-DDMA-SHILLONG-04');
   const [riskZones, setRiskZones] = useState<RiskZone[]>([]);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [fieldReports, setFieldReports] = useState<FieldReport[]>([]);
@@ -70,20 +75,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     refreshData();
   }, []);
 
-  const login = (id: string) => {
+  const login = (id: string, role: UserRole) => {
     setIsAuthenticated(true);
-    addToast('Authenticated', `Session initialized for official ID: ${id || 'NER-DDMA-04'}`, 'success');
+    setOfficialId(id || 'NER-DDMA-SHILLONG-04');
+    setUserRole(role);
+    addToast('Authenticated', `Secure operational session established for ${role} (${id || 'NER-DDMA-SHILLONG-04'}).`, 'success');
   };
 
   const logout = () => {
     setIsAuthenticated(false);
-    addToast('Signed Out', 'Disaster command session concluded.', 'info');
+    addToast('Session Ended', 'You have signed out of the command portal.', 'info');
   };
 
   const addNewReport = async (reportData: Omit<FieldReport, 'id' | 'time' | 'date'>) => {
     const created = await api.createFieldReport(reportData);
     setFieldReports((prev) => [created, ...prev]);
-    addToast('Report Logged', `Field report #${created.id} submitted with GPS coordinates.`, 'success');
+    addToast('Field Report Ingested', `Report #${created.id} submitted with GPS coordinates.`, 'success');
     return created;
   };
 
@@ -107,6 +114,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider
       value={{
         isAuthenticated,
+        userRole,
+        officialId,
+        setUserRole,
         login,
         logout,
         riskZones,

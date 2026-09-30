@@ -1,5 +1,11 @@
 export type RiskLevel = 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
 
+export type UserRole = 
+  | 'District Authority'
+  | 'State Disaster Management Authority'
+  | 'Road Agency (NHIDCL / BRO)'
+  | 'Field Operations Lead';
+
 export interface Coordinates {
   lat: number;
   lng: number;
@@ -9,6 +15,7 @@ export interface RiskZone {
   id: string;
   name: string;
   state: string;
+  district: string;
   riskScore: number; // 0 - 100
   riskLevel: RiskLevel;
   confidence: number; // percentage
@@ -24,6 +31,7 @@ export interface RiskZone {
   description: string;
   contributingFactors: {
     factor: string;
+    level: 'High' | 'Moderate' | 'Low';
     percentage: number;
     description: string;
   }[];
@@ -49,12 +57,11 @@ export interface AlertItem {
 
 export type ObservationType = 
   | 'Slope crack'
+  | 'Soil movement'
   | 'Blocked road'
-  | 'Water accumulation'
-  | 'Possible landslide'
   | 'Landslide'
   | 'Infrastructure damage'
-  | 'Soil movement';
+  | 'Water accumulation';
 
 export interface FieldReport {
   id: string;
@@ -111,4 +118,35 @@ export interface ResponsePriorityItem {
   populationEstimate: number;
   suggestedAction: string;
   routeStatus: string;
+}
+
+export interface SatelliteAnalysis {
+  zoneId: string;
+  locationName: string;
+  captureDate: string;
+  baselineDate: string;
+  sensor: string;
+  terrainChange: 'High' | 'Moderate' | 'Low';
+  landslideEvidence: 'High' | 'Moderate' | 'Low';
+  suspectedAreaHectares: number;
+  ndviDeltaPercent: number;
+  displacementMm: number;
+  summary: string;
+}
+
+export type SupportedLanguage = 
+  | 'English'
+  | 'Hindi'
+  | 'Assamese'
+  | 'Khasi'
+  | 'Mizo'
+  | 'Manipuri';
+
+export interface CommunityAlertTemplate {
+  language: SupportedLanguage;
+  langNative: string;
+  title: string;
+  body: string;
+  smsPreview: string;
+  advisory: string;
 }
